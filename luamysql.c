@@ -19,8 +19,9 @@
 
 #include "mysql.h"
 
-#include "lua.h"
-#include "lauxlib.h"
+#include <lua.h>
+#include <lauxlib.h>
+
 #if ! defined (LUA_VERSION_NUM) || LUA_VERSION_NUM < 501
 #include "compat-5.1.h"
 #endif
@@ -68,13 +69,15 @@
 #ifndef LUA_VERSION_NUM
 #define LUA_VERSION_NUM 0
 #endif
-#if LUA_VERSION_NUM < 501
+//#if LUA_VERSION_NUM < 501
 #define luaL_register(a, b, c) luaL_openlib((a), (b), (c), 0)
-#endif
+//#endif
 
 #define LUA_MYSQL_CONN "MySQL connection"
 #define LUA_MYSQL_RES "MySQL result"
 #define LUA_MYSQL_TABLENAME "mysql"
+
+#define LUA_COMPAT_MODULE
 
 typedef struct {
     short      closed;
@@ -93,8 +96,21 @@ typedef struct {
     MYSQL_RES *res;
 } lua_mysql_res;
 
+/**
+struct luaL_reg {
+    const char *name;
+    lua_CFunction func;
+};
+*/
+
+/**
+typedef struct _luaL_Reg {
+    const char *name;
+    lua_CFunction func;
+} luaL_Reg;
+*/
+
 void luaM_setmeta (lua_State *L, const char *name);
-int luaM_register (lua_State *L, const char *name, const luaL_reg *methods);
 int luaopen_mysql (lua_State *L);
 
 /**                   
@@ -119,37 +135,6 @@ void luaM_setmeta (lua_State *L, const char *name) {
     luaL_getmetatable (L, name);
     lua_setmetatable (L, -2);
 }     
-
-/**
-* Create a metatable and leave it on top of the stack.
-*/
-int luaM_register (lua_State *L, const char *name, const luaL_reg *methods) {
-    if (!luaL_newmetatable (L, name))
-        return 0;
-
-    /* define methods */
-    luaL_register (L, NULL, methods);
-
-    /* define metamethods */
-    lua_pushliteral (L, "__gc");
-    lua_pushcfunction (L, methods->func);
-    lua_settable (L, -3);
-
-    lua_pushliteral (L, "__index");
-    lua_pushvalue (L, -2);
-    lua_settable (L, -3);
-
-    lua_pushliteral (L, "__tostring");
-    lua_pushstring (L, name);
-    lua_pushcclosure (L, luaM_tostring, 1);
-    lua_settable (L, -3);
-
-    lua_pushliteral (L, "__metatable");
-    lua_pushliteral (L, "you're not allowed to get this metatable");
-    lua_settable (L, -3);
-
-    return 1;
-}
 
 /**
 * message
@@ -657,14 +642,14 @@ static int Lversion (lua_State *L) {
 * driver open method.
 */
 int luaopen_mysql (lua_State *L) {
-    struct luaL_reg driver[] = {
+    static const luaL_Reg driver[] = {
         { "connect",   Lmysql_connect },
         { "escape_string",   Lmysql_escape_string },
         { "version",   Lversion },
         { NULL, NULL },
     };
 
-    struct luaL_reg result_methods[] = {
+    static const luaL_Reg result_methods[] = {
         { "data_seek",   Lmysql_data_seek },
         { "num_fields",   Lmysql_num_fields },
         { "num_rows",   Lmysql_num_rows },
@@ -675,7 +660,7 @@ int luaopen_mysql (lua_State *L) {
         { NULL, NULL }
     };
 
-    static const luaL_reg connection_methods[] = {
+    static const luaL_Reg connection_methods[] = {
         { "error",   Lmysql_error },
         { "errno",   Lmysql_errno },
         { "select_db",   Lmysql_select_db },
@@ -692,11 +677,12 @@ int luaopen_mysql (lua_State *L) {
         { NULL, NULL }
     };
 
-    luaM_register (L, LUA_MYSQL_CONN, connection_methods);
-    luaM_register (L, LUA_MYSQL_RES, result_methods);
-    lua_pop (L, 2);
+    luaL_newlib(L, connection_methods);
+    luaL_newlib(L, result_methods);
 
-    luaL_register (L, LUA_MYSQL_TABLENAME, driver);
+    // SEE http://www.lua.org/manual/5.2/manual.html#luaL_newlib
+    //luaL_register (L, LUA_MYSQL_TABLENAME, driver);
+    luaL_newlib(L, driver);
 
     lua_pushliteral (L, "_MYSQLVERSION");
     lua_pushliteral (L, MYSQL_SERVER_VERSION);   

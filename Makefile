@@ -23,31 +23,32 @@
 # If you use this package in a product, an acknowledgment in the product
 # documentation would be greatly appreciated (but it is not required).
 
-#CC = gcc
+CC = gcc
+#CC = clang
 #RM = rm
 
-DRIVER_LIBS= -L/usr/lib/mysql -lmysqlclient -lz
-DRIVER_INCS= -I/usr/include/mysql 
+DRIVER_LIBS= -L/usr/local/mysql/lib -lmysqlclient -lz
+DRIVER_INCS= -I/usr/local/mysql/include 
 
 # Name of .pc file. "lua5.1" on Debian/Ubuntu
-LUAPKG = lua5.1
+LUAPKG = lua5.2
 
 WARN= -Wall -Wmissing-prototypes -Wmissing-declarations
-CFLAGS = `pkg-config $(LUAPKG) --cflags` -O3 $(WARN) $(DRIVER_INCS)
-INSTALL_PATH = `pkg-config $(LUAPKG) --variable=INSTALL_CMOD`
-LIBS = `pkg-config $(LUAPKG) --libs`
+#CFLAGS = `pkg-config $(LUAPKG) --cflags` -O3 $(WARN) $(DRIVER_INCS)
+#INSTALL_PATH = `pkg-config $(LUAPKG) --variable=INSTALL_CMOD`
+#LIBS = `pkg-config $(LUAPKG) --libs`
 
 ## If your system doesn't have pkg-config, comment out the previous lines and
 ## uncomment and change the following ones according to your building
 ## enviroment.
 
-#CFLAGS = -I/usr/include/lua5.1/ -O3 -Wall
-#LIBS = -llua5.1
-#INSTALL_PATH = /usr/lib/lua/5.1
+CFLAGS = -I/Users/hy0kl/local/include -O3 -Wall $(DRIVER_INCS)
+LIBS = -llua
+INSTALL_PATH = /Users/hy0kl/local/lib/lua/5.2
 
 
 mysql.so: luamysql.c
-	$(CC) -o mysql.so -shared $(LIBS) $(CFLAGS) luamysql.c $(DRIVER_LIBS)
+	$(CC) -o mysql.so -shared $(CFLAGS) luamysql.c $(DRIVER_LIBS) $(LIBS)
 
 install: mysql.so
 	make test
